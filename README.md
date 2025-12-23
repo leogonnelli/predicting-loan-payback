@@ -1,11 +1,6 @@
-# Predicting Loan Payback - Kaggle Competition
+# Predicting Loan Payback
 
 A machine learning project for predicting whether a loan will be paid back or not (binary classification).
-
-## Competition Details
-- **Task:** Binary Classification
-- **Metric:** ROC-AUC
-- **Platform:** Kaggle Playground Series
 
 ## Project Structure
 
@@ -89,7 +84,3 @@ matplotlib
 seaborn
 jupyter
 ```
-
-## License
-
-MIT
