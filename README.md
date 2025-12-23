@@ -93,4 +93,3 @@ jupyter
 ## License
 
 MIT
-
