@@ -2,6 +2,7 @@
 
 A machine learning project for predicting whether a loan will be paid back or not (binary classification).
 
+
 ## Project Structure
 
 ```
