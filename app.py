@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import pickle
+import lightgbm as lgb
 import os
 
 # Page configuration
@@ -14,17 +14,18 @@ st.set_page_config(
 st.title("🏦 Loan Payback Probability Predictor")
 st.markdown("Enter the client's information below to predict the probability of loan repayment.")
 
+# Warning about realistic parameters
+st.info(" **Note**: This model works best with realistic combinations of parameters. Unrealistic parameter combinations (e.g., very low income with high loan amounts, or mismatched credit scores and interest rates) may produce unreliable predictions, as the model was trained on realistic loan scenarios.")
+
 # Load model with caching
 @st.cache_resource
 def load_model():
-    """Load the trained Lasso Logistic Regression model"""
-    model_path = 'models/lasso_logistic_model.pkl'
+    """Load the trained LightGBM model"""
+    model_path = 'models/lgbm_loan_model.txt'
     if not os.path.exists(model_path):
         st.error(f"Model file not found at {model_path}. Please ensure the model is trained.")
         return None
-    with open(model_path, 'rb') as f:
-        model_data = pickle.load(f)
-    return model_data
+    return lgb.Booster(model_file=model_path)
 
 # Feature engineering function (same as in notebooks)
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -46,23 +47,30 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     
     return out
 
-def prepare_prediction_input(user_inputs, model_data):
-    """Prepare user inputs for prediction with feature engineering and preprocessing"""
+def prepare_prediction_input(user_inputs):
+    """Prepare user inputs for prediction with feature engineering"""
     df = pd.DataFrame([user_inputs])
     df = add_features(df)
     
-    # Get feature columns from model_data (same order as training)
-    categorical_features = model_data['categorical_features']
-    numerical_features = model_data['numerical_features']
+    # Define features in same order as training
+    categorical_features = [
+        'gender', 'marital_status', 'education_level', 'employment_status',
+        'loan_purpose', 'grade', 'grade_subgrade'
+    ]
+    numerical_features = [
+        'annual_income', 'debt_to_income_ratio', 'credit_score', 'loan_amount', 'interest_rate',
+        'subgrade_num', 'grade_score', 'has_stable_income', 'is_unemployed',
+        'risk_score'
+    ]
     feature_cols = categorical_features + numerical_features
     
     X = df[feature_cols].copy()
     
-    # Apply preprocessing pipeline (OneHotEncoder + StandardScaler)
-    preprocessor = model_data['preprocessor']
-    X_processed = preprocessor.transform(X)
+    # Convert categoricals to category dtype (important for LightGBM)
+    for col in categorical_features:
+        X[col] = X[col].astype('category')
     
-    return X_processed
+    return X
 
 # Main form
 with st.form("loan_prediction_form"):
@@ -179,18 +187,15 @@ if submitted:
     }
     
     # Load model
-    model_data = load_model()
+    model = load_model()
     
-    if model_data is not None:
+    if model is not None:
         try:
-            # Prepare features with preprocessing
-            X_processed = prepare_prediction_input(user_inputs, model_data)
+            # Prepare features
+            X = prepare_prediction_input(user_inputs)
             
-            # Get model from model_data
-            model = model_data['model']
-            
-            # Make prediction (predict_proba returns [prob_class_0, prob_class_1])
-            probability = model.predict_proba(X_processed)[0, 1]
+            # Make prediction
+            probability = model.predict(X)[0]
             probability_percent = probability * 100
             
             # Display results
@@ -264,20 +269,20 @@ if submitted:
 
 # Sidebar with information
 with st.sidebar:
-    st.header("ℹ️ About")
+    st.header("About")
     st.markdown("""
-    This application uses a trained **Lasso Logistic Regression** model to predict 
+    This application uses a trained **LightGBM** machine learning model to predict 
     the probability that a client will pay back their loan.
     
     **Model Characteristics:**
-    - **Type**: Lasso (L1-regularized) Logistic Regression
-    - **CV AUC**: ~0.85-0.90 (varies based on regularization)
-    - **C Parameter**: Optimized via cross-validation
+    - **Type**: LightGBM (Gradient Boosting Decision Tree)
+    - **CV AUC**: ~0.92
+    - **Std CV AUC**: ~0.0006
     
     **Advantages:**
-    - ✅ **Interpretable**: Clear coefficient relationships
-    - ✅ **Intuitive**: Monotonic relationships (e.g., higher interest → lower probability)
-    - ✅ **Fast**: Quick predictions for real-time use
+    - **High Performance**: Excellent predictive accuracy
+    - **Robust**: Handles complex feature interactions
+    - **Fast Inference**: Quick predictions for real-time use
     
     ### How to Use:
     1. Fill in all client information fields
@@ -290,7 +295,5 @@ with st.sidebar:
     - 🔴 **High Risk** (<50%): Low probability of repayment
     """)
     
-    st.markdown("---")
-    st.markdown("**Note**: This is a predictive tool. Final loan decisions should consider additional factors and regulatory requirements.")
 
 
