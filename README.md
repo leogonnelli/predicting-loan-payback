@@ -85,3 +85,6 @@ matplotlib
 seaborn
 jupyter
 ```
+
+Data source: “Predicting Loan Default” Kaggle Competition, from https://www.kaggle.com/competitions/playground-series-s5e11<img width="454" height="62" alt="image" src="https://github.com/user-attachments/assets/ee536809-59bc-4e00-bfd8-5d5424e81c6a" />
+
