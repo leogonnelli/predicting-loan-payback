@@ -86,4 +86,4 @@ seaborn
 jupyter
 ```
 
-Data source: “Predicting Loan Default” Kaggle Competition, from https://www.kaggle.com/competitions/playground-series-s5e11<img 
+Data source: “Predicting Loan Default” Kaggle Competition, from https://www.kaggle.com/competitions/playground-series-s5e11
